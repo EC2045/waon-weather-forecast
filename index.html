@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>和温陣国 気象庁 - 天気予報システム</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600;800&family=Zen+Kaku+Gothic+New:wght@300;400;600;700&display=swap"
+        rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        serif: ['"Shippori Mincho"', 'serif'],
+                        sans: ['"Zen Kaku Gothic New"', 'sans-serif'],
+                    },
+                    colors: {
+                        waon: {
+                            bg: '#0b0f19',
+                            card: 'rgba(21, 28, 44, 0.7)',
+                            border: 'rgba(255, 255, 255, 0.1)',
+                            accent: '#38bdf8',
+                            gold: '#fbbf24',
+                            crimson: '#f43f5e',
+                            midius: '#a855f7'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0b0f19;
+            background-image:
+                radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.12) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.12) 0px, transparent 50%),
+                radial-gradient(at 50% 50%, rgba(15, 23, 42, 0.8) 0px, transparent 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            color: #f3f4f6;
+        }
+
+        .glass-panel {
+            background: rgba(18, 26, 43, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:hover {
+            border-color: rgba(56, 189, 248, 0.3);
+            transform: translateY(-2px);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(11, 15, 25, 0.5);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        @keyframes pulse-subtle {
+
+            0%,
+            100% {
+                opacity: 0.9;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.02);
+            }
+        }
+
+        .pulse-effect {
+            animation: pulse-subtle 4s infinite ease-in-out;
+        }
+    </style>
+</head>
+
+<body class="font-sans antialiased pb-12 px-4 sm:px-6">
+
+    <div class="max-w-3xl mx-auto pt-8 sm:pt-12">
+
+        <!-- Header -->
+        <header class="text-center mb-8 relative">
+            <div
+                class="inline-block mb-2 px-3 py-1 rounded-full text-xs font-semibold tracking-widest text-sky-400 bg-sky-950/60 border border-sky-500/30">
+                <i class="fa-solid font-normal fa-synagogue mr-1.5"></i>和温陣国 中央気象局 観測室
+            </div>
+            <h1
+                class="text-3xl sm:text-5xl font-extrabold tracking-wider font-serif text-transparent bg-clip-text bg-gradient-to-r from-sky-200 via-purple-100 to-amber-200">
+                和温陣国の天気
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-400 mt-2 font-light tracking-widest">
+                WAONJIN KINGDOM METEOROLOGICAL SERVICE
+            </p>
+            <div class="w-16 h-0.5 bg-gradient-to-r from-transparent via-sky-500 to-transparent mx-auto mt-4"></div>
+        </header>
+
+        <!-- Main Content Grid -->
+        <main class="space-y-6">
+
+            <!-- Controls Bar -->
+            <div
+                class="flex justify-between items-center bg-slate-900/60 p-3 rounded-2xl border border-white/5 backdrop-blur-md">
+                <div class="flex items-center space-x-2 text-xs text-slate-400 pl-2">
+                    <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span id="update-time" class="font-mono">データ同期中...</span>
+                </div>
+
+                <div class="flex items-center space-x-3">
+                    <!-- Midius Unit Indicator Badge -->
+                    <div
+                        class="px-3 py-1.5 bg-purple-950/80 border border-purple-500/30 text-purple-300 rounded-xl text-xs font-bold font-mono tracking-wide">
+                        <i class="fa-solid fa-temperature-empty mr-1"></i>中氏 (°M) 専任
+                    </div>
+
+                    <!-- Reload Button -->
+                    <button onclick="fetchWeatherData()"
+                        class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition hover:rotate-180 duration-500"
+                        title="更新">
+                        <i class="fa-solid fa-rotate-right text-sm"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Weather Card -->
+            <div id="main-weather-card"
+                class="glass-panel rounded-3xl p-6 sm:p-8 relative overflow-hidden transition-all duration-500">
+                <!-- Background Accent Glow -->
+                <div
+                    class="absolute -right-12 -top-12 w-48 h-48 bg-sky-500/10 rounded-full blur-3xl pointer-events-none">
+                </div>
+                <div
+                    class="absolute -left-12 -bottom-12 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl pointer-events-none">
+                </div>
+
+                <!-- Skeleton Loading State -->
+                <div id="loading-state" class="py-12 text-center space-y-4">
+                    <div class="inline-block text-4xl text-sky-400 animate-spin">
+                        <i class="fa-solid fa-circle-notch"></i>
+                    </div>
+                    <p class="text-sm text-slate-400 tracking-wider">和温陣国の大気情報を取得中...</p>
+                </div>
+
+                <!-- Actual Content (Hidden during load) -->
+                <div id="weather-content" class="hidden">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+
+                        <!-- Left: Main Info -->
+                        <div class="space-y-3">
+                            <div class="flex items-center space-x-2">
+                                <span
+                                    class="bg-amber-500/10 text-amber-300 border border-amber-500/20 px-2.5 py-0.5 rounded-full text-xs font-semibold">
+                                    本日・本国基準
+                                </span>
+                                <span id="today-date" class="text-xs text-slate-400 font-mono">----/--/--</span>
+                            </div>
+
+                            <h2 id="today-telop"
+                                class="text-3xl sm:text-4xl font-extrabold font-serif tracking-wide text-white flex items-center gap-3">
+                                --
+                            </h2>
+
+                            <p id="weather-desc" class="text-xs sm:text-sm text-slate-400 max-w-sm">
+                                帝都和温の気候データです。
+                            </p>
+                        </div>
+
+                        <!-- Right: Big Temperature Display -->
+                        <div
+                            class="flex items-baseline space-x-6 bg-slate-950/40 p-4 sm:p-6 rounded-2xl border border-white/5 self-start md:self-auto">
+                            <!-- Min Temp -->
+                            <div class="text-center">
+                                <span class="block text-xs text-sky-400 font-medium mb-1">最低気温</span>
+                                <span id="today-min-temp"
+                                    class="text-2xl sm:text-3xl font-bold font-mono text-sky-300">--</span>
+                            </div>
+
+                            <div class="h-10 w-px bg-slate-700/50"></div>
+
+                            <!-- Max Temp -->
+                            <div class="text-center">
+                                <span class="block text-xs text-rose-400 font-medium mb-1">最高気温</span>
+                                <span id="today-max-temp"
+                                    class="text-2xl sm:text-3xl font-bold font-mono text-rose-300">--</span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Additional Details Strip -->
+                    <div class="mt-8 pt-6 border-t border-white/10 grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
+                        <div class="bg-slate-900/40 p-3 rounded-xl border border-white/5">
+                            <span class="text-slate-400 block mb-1"><i
+                                    class="fa-solid fa-compass text-sky-400 mr-1.5"></i>補正パラメータ</span>
+                            <span id="offset-val" class="font-mono text-white font-semibold">--</span>
+                        </div>
+                        <div class="bg-slate-900/40 p-3 rounded-xl border border-white/5">
+                            <span class="text-slate-400 block mb-1"><i
+                                    class="fa-solid fa-scale-balanced text-purple-400 mr-1.5"></i>和温気候基準</span>
+                            <span class="font-mono text-purple-200 font-semibold">100 °M (和順)</span>
+                        </div>
+                        <div class="bg-slate-900/40 p-3 rounded-xl border border-white/5 col-span-2 sm:col-span-1">
+                            <span class="text-slate-400 block mb-1"><i
+                                    class="fa-solid fa-shield-halved text-emerald-400 mr-1.5"></i>気候快適度</span>
+                            <span id="comfort-level" class="font-semibold text-emerald-300">算出中</span>
+                        </div>
+                    </div>
+
+                    <!-- Copy Report Button -->
+                    <div class="mt-6 flex justify-end">
+                        <button onclick="copyWeatherReport()"
+                            class="text-xs text-slate-400 hover:text-white flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition">
+                            <i class="fa-regular fa-copy"></i>
+                            <span>予報文をコピー</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Forecast Days Section -->
+            <div class="space-y-3">
+                <h3 class="text-sm font-semibold text-slate-300 flex items-center space-x-2 px-1">
+                    <i class="fa-solid fa-calendar-days text-sky-400"></i>
+                    <span>週間予報 (今日・明日・明後日)</span>
+                </h3>
+
+                <div id="forecast-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <!-- Forecast items will be injected here dynamically -->
+                </div>
+            </div>
+
+            <!-- Midius (°M) Interactive Experience Box -->
+            <div class="glass-panel rounded-2xl p-6 space-y-4">
+                <div class="flex items-center space-x-3">
+                    <div class="p-2.5 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                        <i class="fa-solid fa-scroll text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-serif font-bold text-white text-base">和温陣国独自記号「中氏 (°M)」の指標</h3>
+                        <p class="text-xs text-slate-400">数字が小さくなるほど「熱気」、大きくなるほど「冷気」を表します。</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 text-center text-xs font-mono py-1">
+                    <div class="bg-rose-950/40 border border-rose-500/20 p-2 rounded-xl">
+                        <span class="block text-rose-400 font-bold">85.0 °M 以下</span>
+                        <span class="text-[11px] text-slate-300">極熱・盛夏</span>
+                    </div>
+                    <div class="bg-emerald-950/40 border border-emerald-500/20 p-2 rounded-xl">
+                        <span class="block text-emerald-300 font-bold">100.0 ～ 115.0 °M</span>
+                        <span class="text-[11px] text-slate-300">和順・快適</span>
+                    </div>
+                    <div class="bg-sky-950/40 border border-sky-500/20 p-2 rounded-xl">
+                        <span class="block text-sky-300 font-bold">125.0 °M 以上</span>
+                        <span class="text-[11px] text-slate-300">厳寒・氷雪</span>
+                    </div>
+                </div>
+
+                <!-- Interactive Midius Sensory Simulator -->
+                <div class="pt-3 border-t border-white/5">
+                    <label for="midius-slider"
+                        class="text-xs font-medium text-slate-300 block mb-2 flex justify-between">
+                        <span>中氏（°M）体感シミュレーター</span>
+                        <span class="text-purple-300 font-mono font-bold" id="slider-m-val">112.2 °M</span>
+                    </label>
+                    <input type="range" id="midius-slider" min="80" max="140" value="112.2" step="0.5"
+                        class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-400"
+                        oninput="updateConverter(this.value)">
+                    <div
+                        class="mt-3 bg-slate-900/80 p-3.5 rounded-xl border border-white/5 text-xs flex justify-between items-center">
+                        <div class="flex items-center space-x-2">
+                            <i id="sensory-icon" class="fa-solid fa-shirt text-purple-400 text-base"></i>
+                            <span class="text-slate-300">装束提案: <strong id="sensory-adv"
+                                    class="text-white">平服・軽装でお過ごしいただけます</strong></span>
+                        </div>
+                        <span id="sensory-tag"
+                            class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">適温</span>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <footer class="mt-12 text-center text-xs text-slate-500 space-y-2">
+            <p>© 和温陣国 気象局 & Imperial Weather Network</p>
+            <p class="text-[10px] text-slate-600">データソース: 気象庁 / tsukumijima.net API (和温陣国風シミュレーション加工済)</p>
+        </footer>
+
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast"
+        class="fixed bottom-5 right-5 bg-slate-800 text-white text-xs px-4 py-3 rounded-xl border border-slate-700 shadow-2xl opacity-0 pointer-events-none transition-all duration-300 transform translate-y-2 flex items-center space-x-2">
+        <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
+        <span id="toast-msg">メッセージ</span>
+    </div>
+
+    <script>
+        let rawWeatherData = null;
+
+        /**
+         * 摂氏 (Celsius) → 中氏 (Midius) 変換
+         */
+        function celsiusToMidius(celsius) {
+            return 127 - (74 / 100) * celsius;
+        }
+
+        /**
+         * 2020年1月1日からの経過日数を算出
+         */
+        function getDaysSince2020() {
+            const start = new Date("2020-01-01T00:00:00");
+            const now = new Date();
+            start.setHours(0, 0, 0, 0);
+            now.setHours(0, 0, 0, 0);
+            return Math.floor((now - start) / (1000 * 60 * 60 * 24));
+        }
+
+        /**
+         * 日数をシードとした決定論的乱数発生器
+         */
+        function seededRandom(seed) {
+            let x = Math.sin(seed) * 10000;
+            return x - Math.floor(x);
+        }
+
+        /**
+         * 天気文字列に応じたFontAwesomeアイコンと色を取得
+         */
+        function getWeatherIcon(telop) {
+            if (!telop) return { icon: 'fa-cloud', color: 'text-slate-400' };
+            if (telop.includes('晴')) {
+                if (telop.includes('雨')) return { icon: 'fa-cloud-sun-rain', color: 'text-amber-300' };
+                if (telop.includes('雪')) return { icon: 'fa-snowflake', color: 'text-sky-200' };
+                if (telop.includes('曇')) return { icon: 'fa-cloud-sun', color: 'text-amber-200' };
+                return { icon: 'fa-sun', color: 'text-amber-400' };
+            }
+            if (telop.includes('雨')) {
+                if (telop.includes('雷')) return { icon: 'fa-cloud-bolt', color: 'text-purple-400' };
+                return { icon: 'fa-cloud-showers-heavy', color: 'text-sky-400' };
+            }
+            if (telop.includes('雪')) {
+                return { icon: 'fa-snowflake', color: 'text-sky-100' };
+            }
+            if (telop.includes('曇')) {
+                return { icon: 'fa-cloud', color: 'text-slate-300' };
+            }
+            return { icon: 'fa-cloud-sun', color: 'text-amber-200' };
+        }
+
+        /**
+         * 中氏体感メーター更新
+         */
+        function updateConverter(val) {
+            const midius = parseFloat(val);
+            document.getElementById('slider-m-val').innerText = `${midius.toFixed(1)} °M`;
+
+            const iconEl = document.getElementById('sensory-icon');
+            const advEl = document.getElementById('sensory-adv');
+            const tagEl = document.getElementById('sensory-tag');
+
+            if (midius < 90) {
+                iconEl.className = 'fa-solid fa-fan text-rose-400 text-base';
+                advEl.innerText = '猛暑の気配。涼しい衣服と水分補給が必須です';
+                tagEl.innerText = '酷暑';
+                tagEl.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30';
+            } else if (midius < 105) {
+                iconEl.className = 'fa-solid fa-sun text-amber-300 text-base';
+                advEl.innerText = '薄手の単衣（ひとえ）で心地よく過ごせます';
+                tagEl.innerText = '温暖';
+                tagEl.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30';
+            } else if (midius < 120) {
+                iconEl.className = 'fa-solid fa-shirt text-emerald-400 text-base';
+                advEl.innerText = '過ごしやすい和順な気候です';
+                tagEl.innerText = '快適';
+                tagEl.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+            } else if (midius < 130) {
+                iconEl.className = 'fa-solid fa-vest text-sky-300 text-base';
+                advEl.innerText = '羽織や羽織りものがあると安心です';
+                tagEl.innerText = '肌寒';
+                tagEl.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30';
+            } else {
+                iconEl.className = 'fa-solid fa-mitten text-indigo-300 text-base';
+                advEl.innerText = '厚手の防寒着を着用して防寒対策を';
+                tagEl.innerText = '極寒';
+                tagEl.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30';
+            }
+        }
+
+        async function fetchWeatherData() {
+            const loading = document.getElementById('loading-state');
+            const content = document.getElementById('weather-content');
+
+            loading.classList.remove('hidden');
+            content.classList.add('hidden');
+
+            try {
+                const url = "https://weather.tsukumijima.net/api/forecast/city/130010";
+                const response = await fetch(url);
+
+                if (!response.ok) throw new Error("ネットワーク応答が正常ではありません");
+
+                const data = await response.json();
+                rawWeatherData = data;
+
+                renderWeather(data);
+
+                const now = new Date();
+                document.getElementById('update-time').innerText =
+                    `同期完了: ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+            } catch (err) {
+                console.warn("API取得に失敗したため、補正デモデータを使用します:", err);
+                showToast("データ取得制限のためフォールバック表示中です", "warning");
+
+                const fallbackData = generateFallbackData();
+                rawWeatherData = fallbackData;
+                renderWeather(fallbackData);
+
+                const now = new Date();
+                document.getElementById('update-time').innerText =
+                    `オフライン予測: ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            } finally {
+                loading.classList.add('hidden');
+                content.classList.remove('hidden');
+            }
+        }
+
+        function generateFallbackData() {
+            return {
+                forecasts: [
+                    { date: '今日', telop: '晴れのち曇り', temperature: { min: { celsius: '12' }, max: { celsius: '21' } } },
+                    { date: '明日', telop: '曇り一時雨', temperature: { min: { celsius: '10' }, max: { celsius: '17' } } },
+                    { date: '明後日', telop: '晴れ', temperature: { min: { celsius: '11' }, max: { celsius: '23' } } },
+                ]
+            };
+        }
+
+        /**
+         * 中氏（°M）フォーマット関数
+         */
+        function formatMidius(celsiusVal) {
+            if (celsiusVal === null || celsiusVal === undefined || isNaN(celsiusVal)) {
+                return '--';
+            }
+            const m = celsiusToMidius(celsiusVal);
+            return `${m.toFixed(1)}°M`;
+        }
+
+        /**
+         * 画面描画メインロジック
+         */
+        function renderWeather(data) {
+            const forecasts = data.forecasts || [];
+            if (forecasts.length === 0) return;
+
+            const daysSeed = getDaysSince2020();
+            const random = seededRandom(daysSeed);
+            const offset = random * 10 - 5; // -5.0℃ ～ +5.0℃
+
+            document.getElementById('offset-val').innerText = `${offset >= 0 ? '+' : ''}${(offset * -0.74).toFixed(1)}°M`;
+
+            // 今日の予報
+            const today = forecasts[0];
+            const weatherTelop = today.telop || "不明";
+            const iconInfo = getWeatherIcon(weatherTelop);
+
+            document.getElementById('today-date').innerText = today.dateLabel ? `${today.dateLabel} (${today.date || ''})` : '本日の予報';
+
+            document.getElementById('today-telop').innerHTML = `
+                <i class="fa-solid ${iconInfo.icon} ${iconInfo.color}"></i>
+                <span>${weatherTelop}</span>
+            `;
+
+            let rawMinC = today.temperature.min.celsius !== null ? Number(today.temperature.min.celsius) : null;
+            let rawMaxC = today.temperature.max.celsius !== null ? Number(today.temperature.max.celsius) : null;
+
+            if (rawMinC === null && rawMaxC !== null) rawMinC = rawMaxC - 7;
+            if (rawMaxC === null && rawMinC !== null) rawMaxC = rawMinC + 7;
+            if (rawMinC === null && rawMaxC === null) { rawMinC = 12; rawMaxC = 20; }
+
+            const waonMinC = rawMinC + offset;
+            const waonMaxC = rawMaxC + offset;
+
+            document.getElementById('today-min-temp').innerText = formatMidius(waonMinC);
+            document.getElementById('today-max-temp').innerText = formatMidius(waonMaxC);
+
+            // 快適度判定
+            const avgMidius = celsiusToMidius((waonMinC + waonMaxC) / 2);
+            let comfortText = "和順";
+            let comfortColor = "text-emerald-300";
+            if (avgMidius < 95) { comfortText = "酷暑"; comfortColor = "text-rose-400"; }
+            else if (avgMidius > 122) { comfortText = "寒冷"; comfortColor = "text-sky-300"; }
+            else if (avgMidius >= 105 && avgMidius <= 115) { comfortText = "極めて快適"; comfortColor = "text-amber-300"; }
+
+            const comfortEl = document.getElementById('comfort-level');
+            comfortEl.innerText = comfortText;
+            comfortEl.className = `font-semibold ${comfortColor}`;
+
+            document.getElementById('weather-desc').innerText =
+                `本日の和温陣国は「${weatherTelop}」の見込みです。風速・湿度ともに比較的穏やかな大気状態が予測されています。`;
+
+            const gridEl = document.getElementById('forecast-grid');
+            gridEl.innerHTML = '';
+
+            forecasts.slice(0, 3).forEach((fc, idx) => {
+                const dayOffset = (seededRandom(daysSeed + idx) * 10 - 5);
+
+                let minC = fc.temperature.min.celsius !== null ? Number(fc.temperature.min.celsius) : null;
+                let maxC = fc.temperature.max.celsius !== null ? Number(fc.temperature.max.celsius) : null;
+
+                if (minC === null && maxC !== null) minC = maxC - 6;
+                if (maxC === null && minC !== null) maxC = minC + 6;
+                if (minC === null && maxC === null) { minC = 10 + idx; maxC = 18 + idx; }
+
+                const wMin = minC + dayOffset;
+                const wMax = maxC + dayOffset;
+
+                const fcIcon = getWeatherIcon(fc.telop);
+                const dayLabel = fc.dateLabel || (idx === 0 ? '今日' : idx === 1 ? '明日' : '明後日');
+
+                const cardHtml = `
+                    <div class="glass-card rounded-2xl p-4 flex flex-col justify-between space-y-3">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-bold text-slate-200">${dayLabel}</span>
+                            <span class="text-[10px] text-slate-400 font-mono">${fc.date || ''}</span>
+                        </div>
+                        <div class="flex items-center space-x-3 my-1">
+                            <i class="fa-solid ${fcIcon.icon} ${fcIcon.color} text-2xl"></i>
+                            <span class="text-sm font-semibold text-white">${fc.telop}</span>
+                        </div>
+                        <div class="flex justify-between items-center pt-2 border-t border-white/5 text-xs font-mono">
+                            <span class="text-sky-300">${formatMidius(wMin)}</span>
+                            <span class="text-slate-600">/</span>
+                            <span class="text-rose-300">${formatMidius(wMax)}</span>
+                        </div>
+                    </div>
+                `;
+                gridEl.insertAdjacentHTML('beforeend', cardHtml);
+            });
+        }
+
+        function copyWeatherReport() {
+            if (!rawWeatherData) return;
+
+            const today = rawWeatherData.forecasts[0];
+            const minStr = document.getElementById('today-min-temp').innerText;
+            const maxStr = document.getElementById('today-max-temp').innerText;
+
+            const reportText = `【和温陣国 天気予報】\n` +
+                `状況: ${today.telop}\n` +
+                `気温: 最低 ${minStr} / 最高 ${maxStr}\n` +
+                `#和温陣国の天気 #中氏`;
+
+            const tempTextArea = document.createElement("textarea");
+            tempTextArea.value = reportText;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+
+            try {
+                document.execCommand('copy');
+                showToast('気候レポートをコピーしました');
+            } catch (err) {
+                showToast('コピーに失敗しました', 'error');
+            } finally {
+                document.body.removeChild(tempTextArea);
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const msgEl = document.getElementById('toast-msg');
+            const iconEl = document.getElementById('toast-icon');
+
+            msgEl.innerText = message;
+
+            if (type === 'error') {
+                iconEl.className = 'fa-solid fa-circle-exclamation text-rose-400 text-sm';
+            } else if (type === 'warning') {
+                iconEl.className = 'fa-solid fa-triangle-exclamation text-amber-400 text-sm';
+            } else {
+                iconEl.className = 'fa-solid fa-circle-check text-emerald-400 text-sm';
+            }
+
+            toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-2');
+            toast.classList.add('opacity-100', 'translate-y-0');
+
+            setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-2');
+            }, 3000);
+        }
+
+        window.onload = function () {
+            fetchWeatherData();
+            updateConverter(112.2);
+        };
+    </script>
+</body>
+
+</html>
